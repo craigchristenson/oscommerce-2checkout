@@ -1,7 +1,7 @@
 How to integrate osCommerce with 2Checkout
 
 osCommerce Settings:
-1. Download the 2Checkout payment module at: http://addons.oscommerce.com/info/5343
+1. Download or clone git@github.com:craigchristenson/oscommerce-2checkout.git
 2. Follow the instructions included in the module and upload to your osCommerce directory
 3. Sign in to your osCommerce admin
 4. Click Modules
@@ -18,10 +18,6 @@ osCommerce Settings:
 4. Enter your Secret Word (Must be the same value entered in your osCommerce admin.)
 5. Click Save Changes
 
-For more information visit: osCommerce.com
-Having trouble with these cart instructions? If you are having issues with these shopping cart instructions, or realize they are out of date, please email us at techsupport@2co.com and we will look into it for you.
-
-To install just follow the instructions in the install file.
 
 Please contact 2Checkout directly with any integration questions.
 
