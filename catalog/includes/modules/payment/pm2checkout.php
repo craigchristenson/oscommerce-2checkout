@@ -165,10 +165,10 @@
 
             switch ($country) {
                 case 'United States':
-                    $state = $order->delivery['state'];
+                    $state = $order->customer['state'];
                     break;
                 case 'Canada':
-                    $state = $order->delivery['state'];
+                    $state = $order->customer['state'];
                     break;                    
                 
                 default:
