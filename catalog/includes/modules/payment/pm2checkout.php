@@ -126,15 +126,7 @@
 	else
 	  $tcoLangCodeID = 'en';
 
-
-
-
-            if (DEFAULT_CURRENCY <> 'USD')
-            {
-            $cOrderTotal = $currencies->get_value("USD") * $order->info['total'];
-            }
-            else
-            $cOrderTotal = $order->info['total'];
+            $cOrderTotal = $currencies->get_value(DEFAULT_CURRENCY) * $order->info['total'];
 
             if (MODULE_PAYMENT_2CHECKOUT_TESTMODE == 'Test')
                 $demo = 'Y';
@@ -201,7 +193,6 @@
             tep_draw_hidden_field('x_ship_to_state', $order->delivery['state']) .
             tep_draw_hidden_field('x_ship_to_zip', $order->delivery['postcode']) .
             tep_draw_hidden_field('x_ship_to_country', $order->delivery['country']['title']) .
-            tep_draw_hidden_field('tco_currency', $currency) .
             tep_draw_hidden_field('2co_cart_type', 'osCommerce') .
             tep_draw_hidden_field('2co_tax', number_format($tax, 2, '.', '')) .
             tep_draw_hidden_field('x_Receipt_Link_URL', tep_href_link('pm2checkout_process.php', '', 'SSL')) .
