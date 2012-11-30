@@ -76,7 +76,7 @@
             $img_amex = DIR_WS_MODULES . 'payment/2co/images/amex.gif';
             $img_diners = DIR_WS_MODULES . 'payment/2co/images/diners.gif';
             $img_jcb = DIR_WS_MODULES . 'payment/2co/images/jcb.gif';
-            $co_cc_txt = sprintf(MODULE_PAYMENT_2CHECKOUT_CC_TEXT,
+            $co_cc_txt = sprintf(MODULE_PAYMENT_2CHECKOUT_TEXT_PUBLIC_DESCRIPTION,
                                 tep_image($img_visa,' Visa ','','','align=ABSMIDDLE'),
                                 tep_image($img_mc,' MasterCard ','','','align=ABSMIDDLE'),
                                 tep_image($img_discover,' Discover ','','','align=ABSMIDDLE'),
@@ -106,6 +106,76 @@
             return $confirmation;
         }
 
+    function pass_through_products() {
+        global $order, $currency, $db, $currencies;
+
+        $process_button_string_lineitems;
+            $products = $order->products;
+            $process_button_string_lineitems .= tep_draw_hidden_field('mode', '2CO');
+            for ($i = 0; $i < sizeof($products); $i++) {
+                $prod_array = explode(':', $products[$i]['id']);
+                $product_id = $prod_array[0];
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i + 1) . '_quantity', $products[$i]['qty']);
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i + 1) . '_name', $products[$i]['name']);
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i + 1) . '_description', $products[$i]['model']);
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i + 1) . '_price', number_format(($currencies->get_value($order->info['currency']) * $products[$i]['final_price']), 2, '.', ''));
+            }
+            //shipping
+            if ($order->info['shipping_method']) {
+                $i++;
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i) . '_type', 'shipping');
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i) . '_name', $order->info['shipping_method']);
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i) . '_price', number_format(($currencies->get_value($order->info['currency']) * $order->info['shipping_cost']), 2, '.', ''));
+            }
+            //tax
+            if ($order->info['tax'] > 0) {
+                $i++;
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i) . '_type', 'tax');
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i) . '_name', 'Tax');
+                $process_button_string_lineitems .= tep_draw_hidden_field('li_' . ($i) . '_price', number_format(($currencies->get_value($order->info['currency']) * $order->info['tax']), 2, '.', ''));
+            }
+            return $process_button_string_lineitems;
+    }
+
+    function third_party_cart($merchant_order_id) {
+        global $order, $currency, $db, $currencies;
+
+        $process_button_string_cprod;
+            $products = $order->products;
+            $process_button_string_cprod .= tep_draw_hidden_field('id_type', '1');
+            $process_button_string_cprod .= tep_draw_hidden_field('total', number_format(($currencies->get_value($order->info['currency']) * $order->info['total']), 2, '.', ''));
+            $process_button_string_cprod .= tep_draw_hidden_field('cart_order_id', $merchant_order_id);
+            for ($i = 0; $i < sizeof($products); $i++) {
+                $prod_array = explode(':', $products[$i]['id']);
+                $product_id = $prod_array[0];
+                $process_button_string_cprod .= tep_draw_hidden_field('c_prod_' . ($i + 1), $product_id . ',' . $products[$i]['qty']);
+                $process_button_string_cprod .= tep_draw_hidden_field('c_name_' . ($i + 1), $products[$i]['name']);
+                $process_button_string_cprod .= tep_draw_hidden_field('c_description_' . ($i + 1), $products[$i]['model']);
+                $process_button_string_cprod .= tep_draw_hidden_field('c_price_' . ($i + 1), number_format(($currencies->get_value($order->info['currency']) * $products[$i]['final_price']), 2, '.', ''));
+            }
+            return $process_button_string_cprod;
+    }
+
+    function check_total() {
+        global $order, $currency, $db, $currencies;
+        $lineitem_total = 0;
+        $products = $order->products;
+            for ($i = 0; $i < sizeof($products); $i++) {
+                    $lineitem_total += $products[$i]['qty'] * number_format(($currencies->get_value($order->info['currency']) * $products[$i]['final_price']), 2, '.', '');
+            }
+            //shipping
+            if ($order->info['shipping_method']) {
+                $lineitem_total += number_format(($currencies->get_value($order->info['currency']) * $order->info['shipping_cost']), 2, '.', '');
+            }
+            //tax
+            if ($order->info['tax'] > 0) {
+                $lineitem_total += number_format(($currencies->get_value($order->info['currency']) * $order->info['tax']), 2, '.', '');
+            }
+            return $lineitem_total;
+    }
+
+
+
         function process_button() {
             global $HTTP_POST_VARS, $order, $currency, $currencies, $demo;
             global $i, $n, $shipping, $text, $languages_id;
@@ -119,39 +189,21 @@
 	$tcoLangCode_query = tep_db_query("select code from " . TABLE_LANGUAGES . " where languages_id = '" . (int)$languages_id . "'");
 	$tcoLangCode = tep_db_fetch_array($tcoLangCode_query);
 	$tcoLangCodeID = strtolower($tcoLangCode['code']);
-
 	//If OSC language is Spanish then display 2Checkout cc form in Spanish else display in English
 	if ($tcoLangCodeID == 'es')
 	  $tcoLangCodeID = 'sp';
 	else
 	  $tcoLangCodeID = 'en';
 
+
+
             $cOrderTotal = $currencies->get_value(DEFAULT_CURRENCY) * $order->info['total'];
+            $new_order_ref = date('YmdHis');
 
             if (MODULE_PAYMENT_2CHECKOUT_TESTMODE == 'Test')
                 $demo = 'Y';
             else
                 $demo = '';
-
-            $process_button_string = '';
-
-            // fill 2Checkout V2 details with osc order info
-            // these fields automate product creation on 2checkout's site. comment out all except c_prod if you do not want this feature
-            for ($i = 0, $n = sizeof($order->products); $i < $n; $i++) {
-                $process_button_string .= tep_draw_hidden_field('c_prod_' . $i, $order->products[$i]['model'] . ',' . $order->products[$i]['qty']);
-                $process_button_string .= tep_draw_hidden_field('c_name_' . $i, $order->products[$i]['name']);
-
-                // format product description (from Short Description contrib) 
-                $product_id = $order->products[$i]['id'];
-                $product_query = tep_db_query("select products_description from " . TABLE_PRODUCTS_DESCRIPTION . " where products_id = '" . $product_id . "' and language_id = '" . $languages_id . "'");
-                $product_description = tep_db_fetch_array($product_query);
-                $text = $product_description['products_description'];
-                $text = strip_tags($text);
-                $text = nl2br($text);
-                $text = str_replace("<br />","<br>",$text);
-                $process_button_string .= tep_draw_hidden_field('c_description_' . $i, $text);
-                $process_button_string .= tep_draw_hidden_field('c_price_' . $i, $order->products[$i]['final_price']);
-            }
 
             $country = $order->customer['country']['title'];
 
@@ -161,64 +213,80 @@
                     break;
                 case 'Canada':
                     $state = $order->customer['state'];
-                    break;                    
-                
+                    break;
+
                 default:
                     $state = 'XX';
                     break;
             }
 
-            $process_button_string .= tep_draw_hidden_field('sh_cost', $shipping['cost']);
-
-            $process_button_string .= tep_draw_hidden_field('x_login', MODULE_PAYMENT_2CHECKOUT_LOGIN) .
-            tep_draw_hidden_field('x_amount', number_format($cOrderTotal, 2, '.', '')) .
-            tep_draw_hidden_field('x_invoice_num', date('YmdHis')) .
-            tep_draw_hidden_field('demo', $demo) . 
-            tep_draw_hidden_field('lang', $tcoLangCodeID) .
-            tep_draw_hidden_field('fixed', 'Y') . 
-            tep_draw_hidden_field('id_type', '1') . 
-            tep_draw_hidden_field('x_first_name', $order->customer['firstname']) .
-            tep_draw_hidden_field('x_last_name', $order->customer['lastname']) .
-            tep_draw_hidden_field('x_address', $order->customer['street_address']) .
-            tep_draw_hidden_field('x_city', $order->customer['city']) .
-            tep_draw_hidden_field('x_state', $state) .
-            tep_draw_hidden_field('x_zip', $order->customer['postcode']) .
-            tep_draw_hidden_field('x_country', $order->customer['country']['title']) .
-            tep_draw_hidden_field('x_email', $order->customer['email_address']) .
-            tep_draw_hidden_field('x_phone', $order->customer['telephone']) .
-            tep_draw_hidden_field('x_ship_to_first_name', $order->delivery['firstname']) .
-            tep_draw_hidden_field('x_ship_to_last_name', $order->delivery['lastname']) .
-            tep_draw_hidden_field('x_ship_to_address', $order->delivery['street_address']) .
-            tep_draw_hidden_field('x_ship_to_city', $order->delivery['city']) .
-            tep_draw_hidden_field('x_ship_to_state', $order->delivery['state']) .
-            tep_draw_hidden_field('x_ship_to_zip', $order->delivery['postcode']) .
-            tep_draw_hidden_field('x_ship_to_country', $order->delivery['country']['title']) .
-            tep_draw_hidden_field('2co_cart_type', 'osCommerce') .
-            tep_draw_hidden_field('2co_tax', number_format($tax, 2, '.', '')) .
-            tep_draw_hidden_field('x_Receipt_Link_URL', tep_href_link('pm2checkout_process.php', '', 'SSL')) .
-            tep_draw_hidden_field('x_email_merchant', ((MODULE_PAYMENT_2CHECKOUT_EMAIL_MERCHANT == 'True') ? 'TRUE' : 'FALSE'));
-            return $process_button_string;
+        $process_button_string = tep_draw_hidden_field('sid', MODULE_PAYMENT_2CHECKOUT_LOGIN) .
+                            tep_draw_hidden_field('merchant_order_id', $new_order_ref) .
+                            tep_draw_hidden_field('first_name', $order->customer['firstname']) .
+                            tep_draw_hidden_field('last_name', $order->customer['lastname']) .
+                            tep_draw_hidden_field('street_address', $order->customer['street_address']) .
+                            tep_draw_hidden_field('street_address2', $order->customer['suburb']) .
+                            tep_draw_hidden_field('city', $order->customer['city']) .
+                            tep_draw_hidden_field('state', $state) .
+                            tep_draw_hidden_field('zip', $order->customer['postcode']) .
+                            tep_draw_hidden_field('country', $order->customer['country']['title']) .
+                            tep_draw_hidden_field('email', $order->customer['email_address']) .
+                            tep_draw_hidden_field('phone', $order->customer['telephone']) .
+                            tep_draw_hidden_field('ship_name', $order->delivery['firstname'] . " " . $order->delivery['lastname']) .
+                            tep_draw_hidden_field('ship_street_address', $order->delivery['street_address']) .
+                            tep_draw_hidden_field('ship_street_address2', $order->delivery['suburb']) .
+                            tep_draw_hidden_field('ship_city', $order->delivery['city']) .
+                            tep_draw_hidden_field('ship_state', $order->delivery['state']) .
+                            tep_draw_hidden_field('ship_zip', $order->delivery['postcode']) .
+                            tep_draw_hidden_field('ship_country', $order->delivery['country']['title']) .
+                            tep_draw_hidden_field('2co_cart_type', 'Zen Cart') .
+                            tep_draw_hidden_field('2co_tax', number_format($tax, 2, '.', '')) .
+                            tep_draw_hidden_field('currency_code', $order->info['currency']);
+        if (ENABLE_SSL != 'false') {
+            $process_button_string .= tep_draw_hidden_field('fixed', 'Y') .
+                                tep_draw_hidden_field('x_receipt_link_url', HTTPS_SERVER . DIR_WS_CATALOG . 'process_2checkout.php');
+        } else {
+            $process_button_string .= tep_draw_hidden_field('fixed', 'Y') .
+                                tep_draw_hidden_field('x_receipt_link_url', HTTP_SERVER . DIR_WS_CATALOG . 'process_2checkout.php');
         }
 
+        if (MODULE_PAYMENT_2CHECKOUT_TESTMODE == 'Test'){
+            $process_button_string .= tep_draw_hidden_field('demo', 'Y');
+        }
+
+        $lineitem_total = $this->check_total();
+
+        if (sprintf("%01.2f", $lineitem_total) == sprintf("%01.2f", number_format(($currencies->get_value($order->info['currency']) * $cOrderTotal), 2, '.', ''))) {
+            $process_button_string .= $this->pass_through_products();
+        } else {
+            $process_button_string .= $this->third_party_cart($new_order_ref);
+        }
+        return $process_button_string;
+    }
+
+
+
         function before_process() {
-            global $HTTP_POST_VARS;
+            global $HTTP_POST_VARS, $order, $currencies;
 
             if ($this->check_hash == true) {
 
-            if (MODULE_PAYMENT_2CHECKOUT_TESTMODE == 'Test' && $HTTP_POST_VARS['demo'] =='Y')
-                $order_number = 1;
-                    else
-                $order_number = $HTTP_POST_VARS['x_trans_id'];
+                $cOrderTotal = $currencies->get_value(DEFAULT_CURRENCY) * $order->info['total'];
 
-            $compare_string = $this->secret_word . $this->login_id . $order_number . $HTTP_POST_VARS['x_amount'];
-            // make it md5
-            $compare_hash1 = md5($compare_string);
-            // make all upper
-            $compare_hash1 = strtoupper($compare_hash1);
-            $compare_hash2 = $HTTP_POST_VARS['x_MD5_Hash'];
-            if ($compare_hash1 != $compare_hash2) {
-            tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, 'error_message=' . urlencode(MODULE_PAYMENT_2CHECKOUT_TEXT_ERROR_HASH_MESSAGE), 'SSL', true, false));
-            }
+                if (MODULE_PAYMENT_2CHECKOUT_TESTMODE == 'Test' && $HTTP_POST_VARS['demo'] =='Y') {
+                    $order_number = 1;
+                } else {
+                    $order_number = $HTTP_POST_VARS['order_numer'];
+                }
+                $compare_string = $this->secret_word . $this->login_id . $order_number . $HTTP_POST_VARS['total'];
+                // make it md5
+                $compare_hash1 = md5($compare_string);
+                // make all upper
+                $compare_hash1 = strtoupper($compare_hash1);
+                $compare_hash2 = $HTTP_POST_VARS['key'];
+                if ($compare_hash1 != $compare_hash2) {
+                    tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, 'error_message=' . urlencode(MODULE_PAYMENT_2CHECKOUT_TEXT_ERROR_MESSAGE), 'SSL', true, false));
+                }
             }
             return false;
 
