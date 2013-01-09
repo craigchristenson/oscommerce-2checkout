@@ -241,13 +241,14 @@
                             tep_draw_hidden_field('ship_country', $order->delivery['country']['title']) .
                             tep_draw_hidden_field('2co_cart_type', 'Zen Cart') .
                             tep_draw_hidden_field('2co_tax', number_format($tax, 2, '.', '')) .
+                            tep_draw_hidden_field('purchase_step', 'payment-method') .
                             tep_draw_hidden_field('currency_code', $order->info['currency']);
         if (ENABLE_SSL != 'false') {
             $process_button_string .= tep_draw_hidden_field('fixed', 'Y') .
-                                tep_draw_hidden_field('x_receipt_link_url', HTTPS_SERVER . DIR_WS_CATALOG . 'process_2checkout.php');
+                                tep_draw_hidden_field('x_receipt_link_url', HTTPS_SERVER . DIR_WS_CATALOG . 'pm2checkout_process.php');
         } else {
             $process_button_string .= tep_draw_hidden_field('fixed', 'Y') .
-                                tep_draw_hidden_field('x_receipt_link_url', HTTP_SERVER . DIR_WS_CATALOG . 'process_2checkout.php');
+                                tep_draw_hidden_field('x_receipt_link_url', HTTP_SERVER . DIR_WS_CATALOG . 'pm2checkout_process.php');
         }
 
         if (MODULE_PAYMENT_2CHECKOUT_TESTMODE == 'Test'){
