@@ -277,7 +277,7 @@
                 if (MODULE_PAYMENT_2CHECKOUT_TESTMODE == 'Test' && $HTTP_POST_VARS['demo'] =='Y') {
                     $order_number = 1;
                 } else {
-                    $order_number = $HTTP_POST_VARS['order_numer'];
+                    $order_number = $HTTP_POST_VARS['order_number'];
                 }
                 $compare_string = $this->secret_word . $this->login_id . $order_number . $HTTP_POST_VARS['total'];
                 // make it md5
