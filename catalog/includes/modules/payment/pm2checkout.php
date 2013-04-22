@@ -39,7 +39,7 @@
 
             if (is_object($order)) $this->update_status();
 
-            $this->form_action_url = 'https://beta.2checkout.com/checkout/purchase';
+            $this->form_action_url = 'https://www.2checkout.com/checkout/purchase';
         }
 
         // class methods
@@ -98,7 +98,7 @@
         function confirmation() {
             global $HTTP_POST_VARS;
             if (MODULE_PAYMENT_2CHECKOUT_DIRECT == 'Direct') {
-                echo '<script src="https://beta.2checkout.com/static/checkout/javascript/direct.js"></script>';
+                echo '<script src="https://www.2checkout.com/static/checkout/javascript/direct.min.js"></script>';
             }
             if (DEFAULT_CURRENCY <> 'USD')
             $title = $this->title . MODULE_PAYMENT_2CHECKOUT_CURRENCY_CONVERSITION;
