@@ -39,7 +39,7 @@
 
             if (is_object($order)) $this->update_status();
 
-            $this->form_action_url = 'https://www.2checkout.com/checkout/spurchase';
+            $this->form_action_url = 'https://beta.2checkout.com/checkout/purchase';
         }
 
         // class methods
@@ -97,12 +97,14 @@
 
         function confirmation() {
             global $HTTP_POST_VARS;
+            if (MODULE_PAYMENT_2CHECKOUT_DIRECT == 'Direct') {
+                echo '<script src="https://beta.2checkout.com/static/checkout/javascript/direct.js"></script>';
+            }
             if (DEFAULT_CURRENCY <> 'USD')
             $title = $this->title . MODULE_PAYMENT_2CHECKOUT_CURRENCY_CONVERSITION;
             else
             $title = $this->title;
             $confirmation = array('title' => $title);
-
             return $confirmation;
         }
 
@@ -277,7 +279,7 @@
                 if (MODULE_PAYMENT_2CHECKOUT_TESTMODE == 'Test' && $HTTP_POST_VARS['demo'] =='Y') {
                     $order_number = 1;
                 } else {
-                    $order_number = $HTTP_POST_VARS['order_numer'];
+                    $order_number = $HTTP_POST_VARS['order_number'];
                 }
                 $compare_string = $this->secret_word . $this->login_id . $order_number . $HTTP_POST_VARS['total'];
                 // make it md5
@@ -285,6 +287,7 @@
                 // make all upper
                 $compare_hash1 = strtoupper($compare_hash1);
                 $compare_hash2 = $HTTP_POST_VARS['key'];
+                var_dump($compare_hash1);
                 if ($compare_hash1 != $compare_hash2) {
                     tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, 'error_message=' . urlencode(MODULE_PAYMENT_2CHECKOUT_TEXT_ERROR_MESSAGE), 'SSL', true, false));
                 }
@@ -318,12 +321,13 @@
             tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('Enable 2CheckOut Module', 'MODULE_PAYMENT_2CHECKOUT_STATUS', 'True', 'Do you want to accept 2CheckOut payments?', '6', '1', 'tep_cfg_select_option(array(\'True\', \'False\'), ', now())");
             tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('Login/Store Number', 'MODULE_PAYMENT_2CHECKOUT_LOGIN', '18157', 'Login/Store Number used for the 2CheckOut service', '6', '2', now())");
             tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('Transaction Mode', 'MODULE_PAYMENT_2CHECKOUT_TESTMODE', 'Test', 'Transaction mode used for the 2Checkout service', '6', '3', 'tep_cfg_select_option(array(\'Test\', \'Production\'), ', now())");
-            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('Merchant Notifications', 'MODULE_PAYMENT_2CHECKOUT_EMAIL_MERCHANT', 'True', 'Should 2CheckOut e-mail a receipt to the store owner?', '6', '4', 'tep_cfg_select_option(array(\'True\', \'False\'), ', now())");
-            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('Sort order of display.', 'MODULE_PAYMENT_2CHECKOUT_SORT_ORDER', '0', 'Sort order of display. Lowest is displayed first.', '6', '5', now())");
-            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, use_function, set_function, date_added) values ('Payment Zone', 'MODULE_PAYMENT_2CHECKOUT_ZONE', '0', 'If a zone is selected, only enable this payment method for that zone.', '6', '6', 'tep_get_zone_class_title', 'tep_cfg_pull_down_zone_classes(', now())");
-            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, use_function, date_added) values ('Set Order Status', 'MODULE_PAYMENT_2CHECKOUT_ORDER_STATUS_ID', '0', 'Set the status of orders made with this payment module to this value', '6', '7', 'tep_cfg_pull_down_order_statuses(', 'tep_get_order_status_name', now())");
-            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('Check MD5 hash', 'MODULE_PAYMENT_2CHECKOUT_CHECK_HASH', 'True', 'Should the 2CheckOut MD5 hash facilty to be checked?', '6', '8', 'tep_cfg_select_option(array(\'True\', \'False\'), ', now())");
-            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('Secret Word', 'MODULE_PAYMENT_2CHECKOUT_SECRET_WORD', 'tango', 'Secret word for the 2CheckOut MD5 hash facility', '6', '9', now())");
+            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('Transaction Mode', 'MODULE_PAYMENT_2CHECKOUT_DIRECT', 'Direct', 'Use Direct Checkout', '6', '4', 'tep_cfg_select_option(array(\'Direct\', \'Dynamic\'), ', now())");
+            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('Merchant Notifications', 'MODULE_PAYMENT_2CHECKOUT_EMAIL_MERCHANT', 'True', 'Should 2CheckOut e-mail a receipt to the store owner?', '6', '5', 'tep_cfg_select_option(array(\'True\', \'False\'), ', now())");
+            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('Sort order of display.', 'MODULE_PAYMENT_2CHECKOUT_SORT_ORDER', '0', 'Sort order of display. Lowest is displayed first.', '6', '6', now())");
+            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, use_function, set_function, date_added) values ('Payment Zone', 'MODULE_PAYMENT_2CHECKOUT_ZONE', '0', 'If a zone is selected, only enable this payment method for that zone.', '6', '7', 'tep_get_zone_class_title', 'tep_cfg_pull_down_zone_classes(', now())");
+            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, use_function, date_added) values ('Set Order Status', 'MODULE_PAYMENT_2CHECKOUT_ORDER_STATUS_ID', '0', 'Set the status of orders made with this payment module to this value', '6', '8', 'tep_cfg_pull_down_order_statuses(', 'tep_get_order_status_name', now())");
+            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('Check MD5 hash', 'MODULE_PAYMENT_2CHECKOUT_CHECK_HASH', 'True', 'Should the 2CheckOut MD5 hash facilty to be checked?', '6', '9', 'tep_cfg_select_option(array(\'True\', \'False\'), ', now())");
+            tep_db_query("insert into " . TABLE_CONFIGURATION . " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('Secret Word', 'MODULE_PAYMENT_2CHECKOUT_SECRET_WORD', 'tango', 'Secret word for the 2CheckOut MD5 hash facility', '6', '10', now())");
         }
 
         function remove() {
@@ -331,7 +335,7 @@
         }
 
         function keys() {
-            return array('MODULE_PAYMENT_2CHECKOUT_STATUS', 'MODULE_PAYMENT_2CHECKOUT_LOGIN', 'MODULE_PAYMENT_2CHECKOUT_TESTMODE', 'MODULE_PAYMENT_2CHECKOUT_EMAIL_MERCHANT', 'MODULE_PAYMENT_2CHECKOUT_ZONE', 'MODULE_PAYMENT_2CHECKOUT_ORDER_STATUS_ID', 'MODULE_PAYMENT_2CHECKOUT_SORT_ORDER', 'MODULE_PAYMENT_2CHECKOUT_CHECK_HASH', 'MODULE_PAYMENT_2CHECKOUT_SECRET_WORD');
+            return array('MODULE_PAYMENT_2CHECKOUT_STATUS', 'MODULE_PAYMENT_2CHECKOUT_LOGIN', 'MODULE_PAYMENT_2CHECKOUT_TESTMODE', 'MODULE_PAYMENT_2CHECKOUT_DIRECT', 'MODULE_PAYMENT_2CHECKOUT_EMAIL_MERCHANT', 'MODULE_PAYMENT_2CHECKOUT_ZONE', 'MODULE_PAYMENT_2CHECKOUT_ORDER_STATUS_ID', 'MODULE_PAYMENT_2CHECKOUT_SORT_ORDER', 'MODULE_PAYMENT_2CHECKOUT_CHECK_HASH', 'MODULE_PAYMENT_2CHECKOUT_SECRET_WORD');
         }
     }
 ?>
