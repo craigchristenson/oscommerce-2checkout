@@ -287,7 +287,6 @@
                 // make all upper
                 $compare_hash1 = strtoupper($compare_hash1);
                 $compare_hash2 = $HTTP_POST_VARS['key'];
-                var_dump($compare_hash1);
                 if ($compare_hash1 != $compare_hash2) {
                     tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, 'error_message=' . urlencode(MODULE_PAYMENT_2CHECKOUT_TEXT_ERROR_MESSAGE), 'SSL', true, false));
                 }
